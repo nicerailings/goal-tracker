@@ -521,12 +521,16 @@ function AppShell({
             <div className="w-10 flex items-center justify-end">{right}</div>
           </div>
         </div>
-        <div className="px-4 py-4 pb-24">{children}</div>
+        <div
+          className="px-4 py-4"
+          style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
 }
-
 function BottomTabs({
   tab,
   setTab,
@@ -536,45 +540,49 @@ function BottomTabs({
 }) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30">
-      <div className="mx-auto max-w-md bg-white border-t border-slate-200">
-      <div className="h-16 flex items-center justify-around">
-        <button
-          className={`flex flex-col items-center gap-1 text-xs ${
-            tab === "calendar" ? "text-sky-600" : "text-slate-400"
-          }`}
-          onClick={() => setTab("calendar")}
-        >
-          <div className="w-9 h-7 rounded-xl flex items-center justify-center">
-            <Calendar className="w-5 h-5" />
-          </div>
-          Calendar
-        </button>
+      <div
+        className="mx-auto max-w-md bg-white border-t border-slate-200"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="h-14 flex items-center justify-around pt-1">
 
-        <button
-          className={`flex flex-col items-center gap-1 text-xs ${
-            tab === "goals" ? "text-sky-600" : "text-slate-400"
-          }`}
-          onClick={() => setTab("goals")}
-        >
-          <div className="w-9 h-7 rounded-xl flex items-center justify-center">
-            <Target className="w-5 h-5 text-slate-500" />
-          </div>
-          Goals
-        </button>
+          <button
+            className={`flex flex-col items-center text-xs leading-tight ${
+              tab === "calendar" ? "text-sky-600" : "text-slate-400"
+            }`}
+            onClick={() => setTab("calendar")}
+          >
+            <div className="w-9 h-7 rounded-xl flex items-center justify-center -mb-0.5">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <span>Calendar</span>
+          </button>
 
-        <button
-          className={`flex flex-col items-center gap-1 text-xs ${
-            tab === "progress" ? "text-sky-600" : "text-slate-400"
-          }`}
-          onClick={() => setTab("progress")}
-        >
-          <div className="w-9 h-7 rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-          Progress
-        </button>
-      </div>
+          <button
+            className={`flex flex-col items-center text-xs leading-tight ${
+              tab === "goals" ? "text-sky-600" : "text-slate-400"
+            }`}
+            onClick={() => setTab("goals")}
+          >
+            <div className="w-9 h-7 rounded-xl flex items-center justify-center -mb-0.5">
+              <Target className="w-5 h-5 text-slate-500" />
+            </div>
+            <span>Goals</span>
+          </button>
 
+          <button
+            className={`flex flex-col items-center text-xs leading-tight ${
+              tab === "progress" ? "text-sky-600" : "text-slate-400"
+            }`}
+            onClick={() => setTab("progress")}
+          >
+            <div className="w-9 h-7 rounded-xl flex items-center justify-center -mb-0.5">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <span>Progress</span>
+          </button>
+
+        </div>
       </div>
     </div>
   );
@@ -641,7 +649,9 @@ function Modal({
               Done
             </button>
           </div>
-          <div className="px-4 pb-4 max-h-[70vh] overflow-auto">{children}</div>
+          <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain">
+            {children}
+          </div>
           {footer ? <div className="px-4 pb-5">{footer}</div> : null}
         </div>
       </div>
@@ -669,13 +679,18 @@ function Input({
   placeholder?: string;
   type?: string;
 }) {
+  const isDate = type === "date";
+
   return (
     <input
       type={type}
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 outline-none focus:border-sky-400"
+      className={[
+        "w-full min-w-0 h-12 px-4 rounded-2xl bg-white border border-slate-200 outline-none focus:border-sky-400",
+        isDate ? "appearance-none text-sm" : "",
+      ].join(" ")}
     />
   );
 }
