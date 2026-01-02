@@ -9,7 +9,7 @@ import {
   ArrowLeftRight,
   Settings,
   Info,
-
+  Copy,
   Calendar,
   CalendarCheck,
   Check,
@@ -19,7 +19,6 @@ import {
   CigaretteOff,
   WineOff,
   MonitorOff,
-
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -27,11 +26,8 @@ import {
   SlidersHorizontal,
   Trash2,
   Pencil,
-
   Target,
   TrendingUp,
-
-  // Fitness / Body
   Dumbbell,
   Activity,
   Flame,
@@ -42,8 +38,6 @@ import {
   Scale,
   Droplet,
   Gauge,
-
-  // Mind / Balance
   Wind,
   Waves,
   Leaf,
@@ -51,8 +45,6 @@ import {
   Smile,
   PawPrint,
   Brain,
-
-  // Habits / Routine
   Repeat,
   AlarmClock,
   Moon,
@@ -64,8 +56,6 @@ import {
   Vegan,
   Plane,
   Sunrise,
-
-  // Work / Study
   Briefcase,
   ClipboardCheck,
   ListChecks,
@@ -73,14 +63,10 @@ import {
   Book,
   GraduationCap,
   Code,
-
-  // Money
   DollarSign,
   CreditCard,
   PiggyBank,
   Wallet,
-
-  // Creativity / Fun
   Music,
   Headphones,
   Camera,
@@ -89,6 +75,36 @@ import {
   Trophy,
   Zap,
   Star,
+  AlertTriangle,
+  ShieldCheck,
+  Handshake,
+  Users,
+  User,
+  Map as MapIcon,
+  MapPin,
+  Clock,
+  CalendarDays,
+  RefreshCcw,
+  StretchHorizontal,
+  Award,
+  Medal,
+  Flag,
+  Lightbulb,
+  Megaphone,
+  ShoppingCart,
+  Clipboard,
+  Gift,
+  Presentation,
+  Laugh,
+  Salad,
+  CandyOff,
+  Home,
+  PhoneOff,
+  TimerReset,
+  Mountain,
+  Play,
+  Flower2,
+  Recycle,
   BarChart3,
   LineChart as LineChartIcon,
 } from "lucide-react";
@@ -452,88 +468,110 @@ const COLOUR_OPTIONS = [
   "#FDE68A", "#FACC15", "#FFFF00", "#FED7AA", "#FB923C", "#FFA500", "#A52A2A", "#800000",
   "#C0C0C0", "#CBD5E1", "#808080", "#57534E", "#1F2937", "#0F172A", "#000000", "#FFFFFF",
 ];
-
 const GOAL_ICONS = [
-  // Core
   { key: "Target", label: "Goal", Icon: Target },
   { key: "TrendingUp", label: "Progress", Icon: TrendingUp },
   { key: "CheckSquare", label: "Complete", Icon: CheckSquare },
+  { key: "Flag", label: "Finish", Icon: Flag },
+  { key: "Trophy", label: "Achievement", Icon: Trophy },
+  { key: "Award", label: "Award", Icon: Award },
+  { key: "Medal", label: "Milestone", Icon: Medal },
+  { key: "Star", label: "Favourite", Icon: Star },
 
-  // Arrows / Direction
+  { key: "Dumbbell", label: "Strength", Icon: Dumbbell },
+  { key: "Activity", label: "Activity", Icon: Activity },
+  { key: "Play", label: "Start", Icon: Play },
+  { key: "Bike", label: "Cycling", Icon: Bike },
+  { key: "Footprints", label: "Steps", Icon: Footprints },
+  { key: "StretchHorizontal", label: "Stretching", Icon: StretchHorizontal },
+  { key: "Heart", label: "Heart", Icon: Heart },
+  { key: "Scale", label: "Weight", Icon: Scale },
+  { key: "Droplet", label: "Hydration", Icon: Droplet },
+  { key: "Gauge", label: "Speed", Icon: Gauge },
+  { key: "Flame", label: "Streak", Icon: Flame },
+  { key: "Timer", label: "Time", Icon: Timer },
+  { key: "TimerReset", label: "Reset Timer", Icon: TimerReset },
+
+  { key: "Moon", label: "Sleep", Icon: Moon },
+  { key: "BedDouble", label: "Rest", Icon: BedDouble },
+  { key: "AlarmClock", label: "Wake up", Icon: AlarmClock },
+  { key: "Sun", label: "Morning", Icon: Sun },
+  { key: "Sunrise", label: "Wake Early", Icon: Sunrise },
+  { key: "Repeat", label: "Routine", Icon: Repeat },
+  { key: "RefreshCcw", label: "Reset", Icon: RefreshCcw },
+  { key: "Clock", label: "Time Management", Icon: Clock },
+  { key: "CalendarDays", label: "Daily Goal", Icon: CalendarDays },
+  { key: "Calendar", label: "Calendar", Icon: Calendar },
+  { key: "CalendarCheck", label: "Checked", Icon: CalendarCheck },
+
+  { key: "Leaf", label: "Wellbeing", Icon: Leaf },
+  { key: "Flower2", label: "Nature", Icon: Flower2 },
+  { key: "Wind", label: "Breathing", Icon: Wind },
+  { key: "Waves", label: "Flow", Icon: Waves },
+  { key: "Sparkles", label: "Mindfulness", Icon: Sparkles },
+  { key: "Brain", label: "Mind", Icon: Brain },
+  { key: "Smile", label: "Positivity", Icon: Smile },
+  { key: "Laugh", label: "Happy", Icon: Laugh },
+  { key: "Lightbulb", label: "Insight", Icon: Lightbulb },
+
+  { key: "Apple", label: "Nutrition", Icon: Apple },
+  { key: "Utensils", label: "Meals", Icon: Utensils },
+  { key: "Vegan", label: "Plant Based", Icon: Vegan },
+  { key: "Salad", label: "Healthy Food", Icon: Salad },
+  { key: "CandyOff", label: "No Sweets", Icon: CandyOff },
+  { key: "Coffee", label: "Coffee", Icon: Coffee },
+
+  { key: "Briefcase", label: "Work", Icon: Briefcase },
+  { key: "ClipboardCheck", label: "Tasks", Icon: ClipboardCheck },
+  { key: "Clipboard", label: "Admin", Icon: Clipboard },
+  { key: "ListChecks", label: "Checklist", Icon: ListChecks },
+  { key: "BookOpen", label: "Study", Icon: BookOpen },
+  { key: "Book", label: "Reading", Icon: Book },
+  { key: "GraduationCap", label: "Learning", Icon: GraduationCap },
+  { key: "Code", label: "Programming", Icon: Code },
+  { key: "Pencil", label: "Write", Icon: Pencil },
+  { key: "Presentation", label: "Presentation", Icon: Presentation },
+
+  { key: "DollarSign", label: "Money", Icon: DollarSign },
+  { key: "CreditCard", label: "Spending", Icon: CreditCard },
+  { key: "PiggyBank", label: "Saving", Icon: PiggyBank },
+  { key: "Wallet", label: "Budget", Icon: Wallet },
+  { key: "ShoppingCart", label: "Shopping", Icon: ShoppingCart },
+
+  { key: "User", label: "Personal", Icon: User },
+  { key: "Users", label: "Social", Icon: Users },
+  { key: "Handshake", label: "Connection", Icon: Handshake },
+  { key: "Home", label: "Home", Icon: Home },
+  { key: "PawPrint", label: "Animal", Icon: PawPrint },
+
+  { key: "Music", label: "Music", Icon: Music },
+  { key: "Headphones", label: "Audio", Icon: Headphones },
+  { key: "Camera", label: "Photo", Icon: Camera },
+  { key: "Palette", label: "Art", Icon: Palette },
+  { key: "Gift", label: "Treat", Icon: Gift },
+
+  { key: "Plane", label: "Travel", Icon: Plane },
+  { key: "MapPin", label: "Location", Icon: MapPin },
+  { key: "Map", label: "Explore", Icon: MapIcon },
+  { key: "Mountain", label: "Adventure", Icon: Mountain },
+
   { key: "ArrowUp", label: "Increase", Icon: ArrowUp },
   { key: "ArrowDown", label: "Decrease", Icon: ArrowDown },
   { key: "ArrowRight", label: "Forward", Icon: ArrowRight },
   { key: "ArrowUpRight", label: "Growth", Icon: ArrowUpRight },
   { key: "ArrowLeftRight", label: "Balance", Icon: ArrowLeftRight },
 
-  // Quit / Stop / Reduce
   { key: "X", label: "Stop", Icon: X },
   { key: "Ban", label: "Quit", Icon: Ban },
   { key: "CigaretteOff", label: "Quit Smoking", Icon: CigaretteOff },
   { key: "WineOff", label: "Quit Drinking", Icon: WineOff },
   { key: "MonitorOff", label: "Quit TV", Icon: MonitorOff },
+  { key: "PhoneOff", label: "No Phone", Icon: PhoneOff },
 
-  // Fitness / Health
-  { key: "Dumbbell", label: "Strength", Icon: Dumbbell },
-  { key: "Activity", label: "Activity", Icon: Activity },
-  { key: "Flame", label: "Streak", Icon: Flame },
-  { key: "Heart", label: "Heart", Icon: Heart },
-  { key: "Bike", label: "Cycling", Icon: Bike },
-  { key: "Footprints", label: "Steps", Icon: Footprints },
-  { key: "Timer", label: "Time", Icon: Timer },
-  { key: "Scale", label: "Weight", Icon: Scale },
-  { key: "Droplet", label: "Hydration", Icon: Droplet },
-  { key: "Gauge", label: "Speed", Icon: Gauge },
-
-  // Mind / Balance
-  { key: "Wind", label: "Breathing", Icon: Wind },
-  { key: "Waves", label: "Flow", Icon: Waves },
-  { key: "Leaf", label: "Wellbeing", Icon: Leaf },
-  { key: "Sparkles", label: "Mindfulness", Icon: Sparkles },
-  { key: "Smile", label: "Positivity", Icon: Smile },
-  { key: "PawPrint", label: "Animal", Icon: PawPrint },
-  { key: "Brain", label: "Mind", Icon: Brain },
-
-  // Habits / Routine
-  { key: "Repeat", label: "Routine", Icon: Repeat },
-  { key: "AlarmClock", label: "Wake up", Icon: AlarmClock },
-  { key: "Moon", label: "Sleep", Icon: Moon },
-  { key: "Sun", label: "Morning", Icon: Sun },
-  { key: "BedDouble", label: "Rest", Icon: BedDouble },
-  { key: "Coffee", label: "Coffee", Icon: Coffee },
-  { key: "Apple", label: "Nutrition", Icon: Apple },
-  { key: "Utensils", label: "Meals", Icon: Utensils },
-  { key: "Vegan", label: "Plant Based", Icon: Vegan },
-  { key: "Plane", label: "Travel", Icon: Plane },
-  { key: "Sunrise", label: "Wake Early", Icon: Sunrise },
-
-  // Work / Study
-  { key: "Briefcase", label: "Work", Icon: Briefcase },
-  { key: "ClipboardCheck", label: "Tasks", Icon: ClipboardCheck },
-  { key: "ListChecks", label: "Checklist", Icon: ListChecks },
-  { key: "BookOpen", label: "Study", Icon: BookOpen },
-  { key: "Book", label: "Reading", Icon: Book },
-  { key: "GraduationCap", label: "Learning", Icon: GraduationCap },
-  { key: "Code", label: "Programming", Icon: Code },
-
-
-  // Money
-  { key: "DollarSign", label: "Money", Icon: DollarSign },
-  { key: "CreditCard", label: "Spending", Icon: CreditCard },
-  { key: "PiggyBank", label: "Saving", Icon: PiggyBank },
-  { key: "Wallet", label: "Budget", Icon: Wallet },
-
-  // Creativity / Fun
-  { key: "Music", label: "Music", Icon: Music },
-  { key: "Headphones", label: "Audio", Icon: Headphones },
-  { key: "Camera", label: "Photo", Icon: Camera },
-  { key: "PenTool", label: "Writing", Icon: PenTool },
-  { key: "Palette", label: "Art", Icon: Palette },
-  { key: "Trophy", label: "Achievement", Icon: Trophy },
-  { key: "Zap", label: "Energy", Icon: Zap },
-  { key: "Star", label: "Favourite", Icon: Star },
+  { key: "AlertTriangle", label: "Warning", Icon: AlertTriangle },
+  { key: "ShieldCheck", label: "Health", Icon: ShieldCheck },
+  { key: "Recycle", label: "Sustainable", Icon: Recycle },
 ];
-
 
 
 function getIconByKey(key) {
@@ -693,7 +731,7 @@ function Modal({
           <div className="px-4 pt-4 pb-3 flex items-center justify-between">
             <div className="text-base font-semibold">{title}</div>
             <button className="text-sky-600 font-semibold" onClick={onClose} aria-label="Close">
-              Done
+              Cancel
             </button>
           </div>
           <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain">
@@ -1714,7 +1752,7 @@ export default function App() {
             disabled={!String(draftGoal.name || "").trim()}
 
           >
-            Complete
+            Save Goal
           </PrimaryButton>
         }
       >
@@ -2206,7 +2244,7 @@ export default function App() {
                 }}
               >
                 <span className="text-sm text-slate-700">Edit</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <Pencil className="w-4 h-4 text-slate-400" />
               </button>
 
               <button
@@ -2218,7 +2256,7 @@ export default function App() {
                 }}
               >
                 <span className="text-sm text-slate-700">Duplicate</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <Copy className="w-4 h-4 text-slate-400" />
               </button>
 
               <button
