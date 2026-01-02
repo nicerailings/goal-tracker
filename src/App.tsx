@@ -182,6 +182,7 @@ function fromISODateOnly(dateOnly: string): string | null {
 
 function addDaysDateOnly(dateOnly: string, deltaDays: number) {
   const iso = fromISODateOnly(dateOnly);
+  if (!iso) return toISODateOnly(isoToday()); // or return dateOnly to be “no-op”
   const dt = new Date(iso);
   dt.setDate(dt.getDate() + deltaDays);
   return toISODateOnly(dt.toISOString());
@@ -212,8 +213,11 @@ function computeStreakDays(records: RecordItem[]) {
 }
 
 function daysBetweenDateOnly(a: string, b: string) {
-  const da = new Date(fromISODateOnly(a));
-  const db = new Date(fromISODateOnly(b));
+  const ia = fromISODateOnly(a);
+  const ib = fromISODateOnly(b);
+  if (!ia || !ib) return 0;
+  const da = new Date(ia);
+  const db = new Date(ib);
   return Math.round((db.getTime() - da.getTime()) / (24 * 60 * 60 * 1000));
 }
 
@@ -867,16 +871,12 @@ export default function App() {
   const [tab, setTab] = useState<"goals" | "progress" | "calendar">("goals");
   const [goals, setGoals] = useState<Goal[]>([]);
   const [route, setRoute] = useState<Route>({ name: "home" });
-  const [iconModal, setIconModal] = useState({ open: false });
-  const [showIconPicker, setShowIconPicker] = useState(false);
   const [goalFormError, setGoalFormError] = useState(""); // for date warning etc
   const [customUnits, setCustomUnits] = useState([]);
   const [cardMenu, setCardMenu] = useState({ open: false, goalId: null });
   const [settingsModal, setSettingsModal] = useState(false);
   const [cumulativeInfo, setCumulativeInfo] = useState(false);
   const [hideCompletedGoals, setHideCompletedGoals] = useState(false);
-  const editFromCalendarRef = React.useRef(false);
-  const editFromTrackingRef = React.useRef<string | null>(null);
   const navStackRef = React.useRef<Location[]>([]);
   const editReturnRef = React.useRef<Location | null>(null);
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
@@ -923,16 +923,6 @@ export default function App() {
     a.remove();
 
     URL.revokeObjectURL(url);
-  }
-
-  function openEditGoalFromCalendar(goal: Goal) {
-    editFromCalendarRef.current = true;
-    openEditGoal(goal);
-  }
-
-  function openEditGoalFromTracking(goal: Goal) {
-    editFromTrackingRef.current = goal.id;
-    openEditGoal(goal);
   }
 
   function openImportPicker() {
@@ -1056,9 +1046,15 @@ export default function App() {
   }, [customUnits]);
 
   const orderedGoals = useMemo(() => {
-    return [...goals]
-      .map((g, idx) => ({ ...g, order: typeof g.order === "number" ? g.order : idx }))
-      .sort((a, b) => a.order - b.order);
+    return [...goals].sort((a, b) => {
+      const aDone = !!a.reachedAt;
+      const bDone = !!b.reachedAt;
+
+      if (aDone !== bDone) return aDone ? 1 : -1; // incomplete first
+
+      // within each group, keep your existing ordering
+      return (a.order ?? 0) - (b.order ?? 0);
+    });
   }, [goals]);
 
   useEffect(() => {
@@ -1098,30 +1094,26 @@ export default function App() {
   }
 
   function emptyGoalDraft() {
-    const nextYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-      return {
-        iconKey: "Target",
-        name: "",
-        note: "",
-        startDateOnly: toISODateOnly(isoToday()),
-        targetDateOnly: "", // blank, not required
-        targetNumber: "",
-        startingNumber: "",
-        unit: "",
-        colour: COLOUR_OPTIONS[0],
-        cumulative: false,
+    return {
+      iconKey: "Target",
+      name: "",
+      note: "",
+      startDateOnly: toISODateOnly(isoToday()),
+      targetDateOnly: "",
+      targetNumber: "",
+      startingNumber: "",
+      unit: "",
+      colour: COLOUR_OPTIONS[0],
+      cumulative: false,
 
-        // Calendar planning defaults
-        planEnabled: false,
-        planPerWeek: 3,
-        planDays: [0, 2, 4], // Mon, Wed, Fri (0=Mon ... 6=Sun)
-        calendarName: "",
-        planEnabled: false,
-        planInterval: null,
-        planDays: [],
-        calendarName: "",
-      };
-    }
+      // Calendar planning defaults
+      planEnabled: false,
+      planInterval: null as any, // or: null as ("weekly" | "fortnightly" | "monthly" | null)
+      planDays: [],
+      calendarName: "",
+    };
+  }
+
   function selectUnit(u: string) {
   const unit = String(u || "").trim();
   if (!unit) return;
@@ -1562,7 +1554,7 @@ export default function App() {
         <CalendarScreen
           goals={hideCompletedGoals ? orderedGoals.filter((g) => !g.reachedAt) : orderedGoals}
           onToggleDone={toggleCalendarDone}
-          onEditGoal={openEditGoalFromCalendar}
+          onEditGoal={openEditGoal}   // <- CHANGE THIS (was openEditGoalFromCalendar)
           onRequestCalendarRemove={(goalId, dateOnly) =>
             setCalendarRemove({ open: true, goalId, dateOnly })
           }
@@ -1571,6 +1563,7 @@ export default function App() {
         />
       )
       ) : (
+
         <TrackingScreen
           goal={activeGoal}
           onBack={popNav}
@@ -1579,8 +1572,7 @@ export default function App() {
           onSetChartMode={(mode) => activeGoal && setGoalChartMode(activeGoal.id, mode)}
           onEditGoal={() => {
             if (!activeGoal) return;
-            editFromCalendarRef.current = false;
-            openEditGoal(activeGoal);
+            openEditGoal(activeGoal); // <- KEEP ONLY THIS
           }}
           right={
             <div className="flex items-center">
@@ -1588,7 +1580,6 @@ export default function App() {
                 className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center"
                 onClick={() => {
                   if (!activeGoal) return;
-                  editFromCalendarRef.current = false;
                   openEditGoal(activeGoal);
                 }}
                 aria-label="Edit goal"
@@ -1599,7 +1590,6 @@ export default function App() {
             </div>
           }
         />
-
       )}
 
       <BottomTabs
@@ -2648,12 +2638,30 @@ function GoalCard({
               ) : null}
             </span>
 
-              {goal.targetDate ? (
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="w-4 h-4 text-slate-400" />
-                  <span className="tabular-nums">{formatDisplayDate(goal.targetDate)}</span>
+            {goal.targetDate ? (() => {
+              const today = toISODateOnly(isoToday());
+              const target = toISODateOnly(goal.targetDate);
+              const overdueOrToday = target <= today;
+
+              return (
+                <span
+                  className={[
+                    "inline-flex items-center gap-1 rounded-xl px-2 py-1 text-xs",
+                    overdueOrToday
+                      ? "bg-red-50 text-red-700 border border-red-200"
+                      : "text-slate-500",
+                  ].join(" ")}
+                >
+                  <Calendar
+                    className={`w-4 h-4 ${overdueOrToday ? "text-red-600" : "text-slate-400"}`}
+                  />
+                  <span className="tabular-nums">
+                    {formatDisplayDate(goal.targetDate)}
+                  </span>
                 </span>
-              ) : null}
+              );
+            })() : null}
+
             </div>
           </div>
 
@@ -2677,7 +2685,7 @@ function GoalCard({
               className="w-full h-10 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-sm font-semibold text-slate-700"
               aria-label="Edit goal"
             >
-              Edit
+              Completed
             </button>
           </div>
         ) : hasTarget ? (
@@ -2905,7 +2913,7 @@ function TrackingScreen({
 
                 {hasTarget ? (
                   <span>
-                    Target: {goal.targetNumber}
+                    {goal.targetNumber}
                     {hasUnit ? ` ${goal.unit}` : ""}
                   </span>
                 ) : null}
@@ -3652,12 +3660,6 @@ function CalendarScreen({
     return monthKey(fromISODateOnly(dateOnly)) === monthKey(monthIso);
   }
 
-  function addDaysDateOnly(dateOnly: string, delta: number) {
-    const d = new Date(fromISODateOnly(dateOnly));
-    d.setDate(d.getDate() + delta);
-    return toISODateOnly(d.toISOString());
-  }
-
   function weekStartMonday(dateOnly: string) {
     const d = new Date(fromISODateOnly(dateOnly));
     const js = d.getDay(); // Sun=0
@@ -3789,6 +3791,13 @@ function CalendarScreen({
     setMonthCursor(d.toISOString());
   }
   const selectedCellClass = "bg-sky-50";
+
+  const deadlinesForSelectedDay = useMemo(() => {
+    return (goals || [])
+      .filter((g) => String(g.targetDate || "").trim() !== "")
+      .filter((g) => toISODateOnly(g.targetDate) === selectedDateOnly)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [goals, selectedDateOnly]);
 
   return (
     <AppShell
@@ -4070,34 +4079,60 @@ function CalendarScreen({
           className="cal-scroll flex-1 overflow-y-auto mt-3 pb-24 overscroll-contain"
           style={{ scrollbarWidth: "thin" }}
         >
-          <div className="space-y-2">
-            {tasksForSelectedDay.length === 0 ? (
-              <div className="text-sm text-slate-500 bg-white border border-slate-200 rounded-2xl p-4">
-                Nothing planned for this day.
+        <div className="space-y-2">
+
+        {/* DEADLINES */}
+        {deadlinesForSelectedDay.length > 0 && (
+          <div className="pt-2 space-y-2">
+            {deadlinesForSelectedDay.map((g) => (
+              <div
+                key={`deadline-${g.id}`}
+                className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-slate-800 truncate">
+                    {g.name}
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    Target date
+                  </div>
+                </div>
+                {g.targetNumber != null && g.targetNumber !== "" ? (
+                  <div className="text-xs font-semibold text-amber-700 px-2 py-1 rounded-xl">
+                    {g.targetNumber}
+                    {g.unit ? ` ${g.unit}` : ""}
+                  </div>
+                ) : null}
               </div>
-            ) : (
-              tasksForSelectedDay.map((g) => {
-                const done = goalHasRecordOnDay(g, selectedDateOnly);
-
-                return (
-                  <CalendarTaskRow
-                    key={g.id}
-                    goal={g}
-                    dateOnly={selectedDateOnly}
-                    done={done}
-                    onToggleDone={onToggleDone}
-                    onEditGoal={onEditGoal}
-                    onRequestCalendarRemove={onRequestCalendarRemove}
-                    openRowId={openRowId}
-                    setOpenRowId={setOpenRowId}
-                    onOpenGoal={onOpenGoal}
-                  />
-
-                );
-              })
-
-            )}
+            ))}
           </div>
+        )}
+          {tasksForSelectedDay.length === 0 ? (
+            <div className="text-sm text-slate-500 bg-white border border-slate-200 rounded-2xl p-4">
+              Nothing planned for this day.
+            </div>
+          ) : (
+            tasksForSelectedDay.map((g) => {
+              const done = goalHasRecordOnDay(g, selectedDateOnly);
+
+              return (
+                <CalendarTaskRow
+                  key={g.id}
+                  goal={g}
+                  dateOnly={selectedDateOnly}
+                  done={done}
+                  onToggleDone={onToggleDone}
+                  onEditGoal={onEditGoal}
+                  onRequestCalendarRemove={onRequestCalendarRemove}
+                  openRowId={openRowId}
+                  setOpenRowId={setOpenRowId}
+                  onOpenGoal={onOpenGoal}
+                />
+              );
+            })
+          )}
+        </div>
+
         </div>
       </div>
     </AppShell>
