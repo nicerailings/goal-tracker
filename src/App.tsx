@@ -169,11 +169,15 @@ function toISODateOnly(iso: string) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function fromISODateOnly(dateOnly: string) {
-  const [y, m, d] = dateOnly.split("-").map((v) => parseInt(v, 10));
-  const dt = new Date(y, m - 1, d);
-  dt.setHours(0, 0, 0, 0);
-  return dt.toISOString();
+function fromISODateOnly(dateOnly: string): string | null {
+  const s = String(dateOnly || "").trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+
+  const d = new Date(s + "T12:00:00.000Z");
+  if (!Number.isFinite(d.getTime())) return null;
+
+  return d.toISOString();
 }
 
 function addDaysDateOnly(dateOnly: string, deltaDays: number) {
@@ -300,21 +304,31 @@ function firstLine(text: string) {
   return idx >= 0 ? t.slice(0, idx) : t;
 }
 
-function latestValue(records: RecordItem[], fallback: number) {
+function latestNumericValue(records: RecordItem[], fallback: number | null) {
   if (!records || records.length === 0) return fallback;
-  const sorted = sortByDateAsc(records);
-  return sorted[sorted.length - 1].value;
+
+  const sorted = sortByDateDesc(records);
+  for (const r of sorted) {
+    const v = Number((r as any).value);
+    if (Number.isFinite(v)) return v;
+  }
+  return fallback;
 }
 
-function firstRecordedValue(records: RecordItem[]) {
+function firstNumericRecordedValue(records: RecordItem[]) {
   if (!records || records.length === 0) return null;
+
   const sorted = sortByDateAsc(records);
-  return sorted[0]?.value ?? null;
+  for (const r of sorted) {
+    const v = Number((r as any).value);
+    if (Number.isFinite(v)) return v;
+  }
+  return null;
 }
 
 // If start (explicit or inferred first record) is higher than target, assume lower is better.
 function inferDirection(goal: Pick<Goal, "targetNumber" | "startingNumber" | "records">) {
-  const startCandidate = goal.startingNumber != null ? goal.startingNumber : firstRecordedValue(goal.records || []);
+  const startCandidate = goal.startingNumber != null ? goal.startingNumber : firstNumericRecordedValue(goal.records || []);
   if (startCandidate == null) return "increase";
   return startCandidate > goal.targetNumber ? "decrease" : "increase";
 }
@@ -323,20 +337,24 @@ function computeProgress(goal: Pick<Goal, "targetNumber" | "startingNumber" | "r
   const records = goal.records || [];
   const recordCount = records.length;
 
-  const hasRecords = recordCount > 0;
-  const hasStart = goal.startingNumber != null;
-  const hasTarget = goal.targetNumber != null;
+  const hasTarget = goal.targetNumber != null && Number.isFinite(Number(goal.targetNumber));
+  const hasStart = goal.startingNumber != null && Number.isFinite(Number(goal.startingNumber));
 
-  // If the user set a starting number and hasn't logged anything yet,
-  // treat that starting number as the current value for display.
+  const numericRecords = records.filter((r: any) => Number.isFinite(Number(r.value)));
+  const hasNumericRecords = numericRecords.length > 0;
+
   const current =
-    hasRecords ? latestValue(records, hasStart ? goal.startingNumber! : 0) : hasStart ? goal.startingNumber! : null;
+    hasNumericRecords
+      ? latestNumericValue(records, hasStart ? (goal.startingNumber as number) : null)
+      : hasStart
+        ? (goal.startingNumber as number)
+        : null;
 
   // No target -> no progress calculation, just allow "current" display
   if (!hasTarget) {
     return {
-      dir: "increase",
-      start: hasStart ? goal.startingNumber! : null,
+      dir: "increase" as const,
+      start: hasStart ? (goal.startingNumber as number) : null,
       current,
       target: null,
       progress01: 0,
@@ -346,12 +364,12 @@ function computeProgress(goal: Pick<Goal, "targetNumber" | "startingNumber" | "r
   }
 
   // Target exists but we still have nothing to compare against
-  if (!hasStart && !hasRecords) {
+  if (!hasStart && !hasNumericRecords) {
     return {
-      dir: "increase",
+      dir: "increase" as const,
       start: null,
       current: null,
-      target: goal.targetNumber!,
+      target: Number(goal.targetNumber),
       progress01: 0,
       reached: false,
       recordCount,
@@ -359,21 +377,21 @@ function computeProgress(goal: Pick<Goal, "targetNumber" | "startingNumber" | "r
   }
 
   // We have a baseline (either explicit start, or first record)
-  const start = hasStart ? goal.startingNumber! : current!;
-  const target = goal.targetNumber!;
-  const dir = start > target ? "decrease" : "increase";
+  const start = hasStart ? Number(goal.startingNumber) : Number(firstNumericRecordedValue(records));
+  const target = Number(goal.targetNumber);
+  const dir = start > target ? ("decrease" as const) : ("increase" as const);
 
   let progress01 = 0;
   let reached = false;
 
   if (dir === "increase") {
     const denom = target - start;
-    progress01 = denom === 0 ? 0 : (current! - start) / denom;
-    reached = current! >= target;
+    progress01 = denom === 0 ? 0 : ((current as number) - start) / denom;
+    reached = (current as number) >= target;
   } else {
     const denom = start - target;
-    progress01 = denom === 0 ? 0 : (start - current!) / denom;
-    reached = current! <= target;
+    progress01 = denom === 0 ? 0 : (start - (current as number)) / denom;
+    reached = (current as number) <= target;
   }
 
   return {
@@ -525,6 +543,13 @@ function normaliseColour(c: string) {
 // -------------------------
 // UI Primitives
 // -------------------------
+
+const Req = ({ children }: { children: React.ReactNode }) => (
+  <span className="inline-flex items-center gap-1">
+    <span>{children}</span>
+    <span className="text-red-500 text-xs leading-none">*</span>
+  </span>
+);
 
 function AppShell({
   title,
@@ -1180,12 +1205,20 @@ export default function App() {
     if (!name) return;
 
     const startDate = fromISODateOnly(draftGoal.startDateOnly);
+    if (!startDate) {
+      setGoalFormError("Please enter a valid start date.");
+      return;
+    }
 
     const targetDate =
       String(draftGoal.targetDateOnly || "").trim() === ""
         ? null
         : fromISODateOnly(draftGoal.targetDateOnly);
 
+    if (draftGoal.targetDateOnly && !targetDate) {
+      setGoalFormError("Please enter a valid target date.");
+      return;
+    }
 
     // target number optional
     const targetStr = String(draftGoal.targetNumber ?? "").trim();
@@ -1371,16 +1404,22 @@ export default function App() {
     // - check-in: no numeric value
     // - numeric mode: must be a valid number
     let valueToSave: number | undefined = undefined;
+
+    // If it's a numeric goal, value is OPTIONAL.
+    // If the user leaves it blank, we save a log with no numeric contribution.
     if (!checkIn) {
-      const n = Number(draftRecord.value);
-      if (!Number.isFinite(n)) return;
-      valueToSave = n;
+      const raw = String(draftRecord.value || "").trim();
+      if (raw !== "") {
+        const n = Number(raw);
+        if (!Number.isFinite(n)) return; // keep rejecting non-numbers like "abc"
+        valueToSave = n;
+      }
     }
 
     const newRecord: any = {
       id: uid(),
       date,
-      ...(checkIn ? {} : { value: valueToSave }),
+      ...(valueToSave == null ? {} : { value: valueToSave }),
       ...(noteToSave ? { note: noteToSave } : {}),
     };
 
@@ -1701,80 +1740,80 @@ export default function App() {
           return (
             <div className="space-y-4">
 
-              <Field label="Goal name">
-                <Input
-                  value={draftGoal.name}
-                  onChange={(v) => setDraftGoal((d) => ({ ...d, name: v }))}
-                />
-              </Field>
+            <Field label={<Req>Goal name</Req>}>
+              <Input
+                value={draftGoal.name}
+                onChange={(v) => setDraftGoal((d) => ({ ...d, name: v }))}
+              />
+            </Field>
 
-              <Field label="Note (optional)">
-                <TextArea
-                  value={draftGoal.note}
-                  onChange={(v) => setDraftGoal((d) => ({ ...d, note: v }))}
-                />
-              </Field>
+            <Field label="Note">
+              <TextArea
+                value={draftGoal.note}
+                onChange={(v) => setDraftGoal((d) => ({ ...d, note: v }))}
+              />
+            </Field>
 
-              <Field label="Icon">
-                <div className="bg-white border border-slate-200 rounded-2xl p-3">
-                  <div className="max-h-[168px] overflow-auto">
-                    <div className="grid grid-cols-6 gap-2">
-                      {GOAL_ICONS.map(({ key, label, Icon }) => {
-                        const selected = key === (draftGoal.iconKey || "Target");
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setDraftGoal((d) => ({ ...d, iconKey: key }))}
-                            className={`h-12 rounded-2xl border flex items-center justify-center ${
-                              selected ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-white"
-                            }`}
-                            aria-label={label}
-                            title={label}
-                          >
-                            <Icon className="w-5 h-5 text-slate-700" />
-                          </button>
-                        );
-                      })}
-                    </div>
+            <Field label="Icon">
+              <div className="bg-white border border-slate-200 rounded-2xl p-3">
+                <div className="max-h-[168px] overflow-auto">
+                  <div className="grid grid-cols-6 gap-2">
+                    {GOAL_ICONS.map(({ key, label, Icon }) => {
+                      const selected = key === (draftGoal.iconKey || "Target");
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setDraftGoal((d) => ({ ...d, iconKey: key }))}
+                          className={`h-12 rounded-2xl border flex items-center justify-center ${
+                            selected ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-white"
+                          }`}
+                          aria-label={label}
+                          title={label}
+                        >
+                          <Icon className="w-5 h-5 text-slate-700" />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              </Field>
+              </div>
+            </Field>
 
-              <Field label="Unit">
+            <Field label="Unit">
               <SelectRow
-              label="Select"
-              display={draftGoal.unit}
-              muted={false}
-              onClick={() => openUnitsPicker(draftGoal.unit)}
+                label="Select"
+                display={draftGoal.unit}
+                muted={false}
+                onClick={() => openUnitsPicker(draftGoal.unit)}
               />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start date">
+                <Input
+                  type="date"
+                  value={draftGoal.startDateOnly}
+                  onChange={(v) => setDraftGoal((d) => ({ ...d, startDateOnly: v }))}
+                />
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Start date">
-                  <Input
-                    type="date"
-                    value={draftGoal.startDateOnly}
-                    onChange={(v) => setDraftGoal((d) => ({ ...d, startDateOnly: v }))}
-                  />
-                </Field>
+              <Field label="Target date">
+                <Input
+                  type="date"
+                  value={draftGoal.targetDateOnly}
+                  onChange={(v) => setDraftGoal((d) => ({ ...d, targetDateOnly: v }))}
+                />
+              </Field>
+            </div>
 
-                <Field label="Target date">
-                  <Input
-                    type="date"
-                    value={draftGoal.targetDateOnly}
-                    onChange={(v) => setDraftGoal((d) => ({ ...d, targetDateOnly: v }))}
-                  />
-                </Field>
-                </div>
+            {goalFormError ? (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-2xl px-3 py-2">
+                {goalFormError}
+              </div>
+            ) : null}
 
-              {goalFormError ? (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-2xl px-3 py-2">
-                  {goalFormError}
-                </div>
-              ) : null}
-
-              <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Starting number">
                 <Input
                   type="number"
@@ -2096,7 +2135,10 @@ export default function App() {
               const goal = goals.find((g) => g.id === recordModal.goalId);
               const checkIn = goal ? isCheckInGoal(goal) : true;
               if (checkIn) return false;
-              return !Number.isFinite(Number(draftRecord.value));
+
+              const raw = String(draftRecord.value || "").trim();
+              if (raw === "") return false; // blank is allowed now
+              return !Number.isFinite(Number(raw)); // but "abc" still blocked
             })()}
           >
             Add
@@ -3024,7 +3066,9 @@ function RecordForm({
       ) : (
         <>
           <div className="space-y-2">
-            <div className="text-xs text-slate-400">{goal.unit || "Value"}</div>
+          <div className="text-xs text-slate-400">
+            {(goal.unit ? goal.unit : "Value") + " (optional)"}
+          </div>
             <input
               type="number"
               inputMode="numeric"
@@ -3034,7 +3078,7 @@ function RecordForm({
             />
           </div>
 
-          <Field label="Note (optional)">
+          <Field label="Note">
             <TextArea
               value={draft.note}
               onChange={(v) => setDraft((d) => ({ ...d, note: v }))}
