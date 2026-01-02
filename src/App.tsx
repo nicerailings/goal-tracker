@@ -207,6 +207,32 @@ function computeStreakDays(records: RecordItem[]) {
   return streak;
 }
 
+function daysBetweenDateOnly(a: string, b: string) {
+  const da = new Date(fromISODateOnly(a));
+  const db = new Date(fromISODateOnly(b));
+  return Math.round((db.getTime() - da.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function getRemainingToTarget(goal: Goal) {
+  if (goal.targetNumber == null) return null;
+
+  const stats = computeProgress(goal);
+  if (stats.current == null || stats.target == null) return null;
+
+  // For cumulative goals, "current" in computeProgress may not reflect total,
+  // but your UI uses total = startingNumber + sumNumericRecords.
+  // So use that when cumulative is on.
+  const current = goal.cumulative
+    ? (goal.startingNumber ?? 0) + sumNumericRecords(goal.records || [])
+    : stats.current;
+
+  const target = goal.targetNumber;
+
+  const dir = inferDirection(goal);
+  const remaining = dir === "increase" ? target - current : current - target;
+
+  return Number.isFinite(remaining) ? remaining : null;
+}
 
 function formatDisplayDate(iso: string) {
   const d = new Date(iso);
@@ -829,6 +855,11 @@ export default function App() {
   const navStackRef = React.useRef<Location[]>([]);
   const editReturnRef = React.useRef<Location | null>(null);
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+  const [celebration, setCelebration] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+  }>({ open: false, title: "", message: "" });
   useEffect(() => {
     try {
       const raw = localStorage.getItem("goals-tracker:hide-completed");
@@ -1327,6 +1358,7 @@ export default function App() {
 
     const goal = orderedGoals.find((g) => g.id === goalId);
     if (!goal) return;
+    let celebrationToShow: { title: string; message: string } | null = null;
 
     const date = fromISODateOnly(draftRecord.dateOnly);
 
@@ -1357,6 +1389,46 @@ export default function App() {
         if (g.id !== goalId) return g;
 
         const next = { ...g, records: [...(g.records || []), newRecord] };
+        // ---- Celebrations (non-completion) ----
+        const prevStreak = computeStreakDays(g.records || []);
+        const nextStreak = computeStreakDays(next.records || []);
+
+        const prevCount = (g.records || []).length;
+        const nextCount = (next.records || []).length;
+
+        const streakMilestones = new Set([3, 7, 10, 14, 20, 30, 50, 75, 100]);
+        if (nextStreak !== prevStreak && streakMilestones.has(nextStreak)) {
+          const remaining = getRemainingToTarget(next);
+          celebrationToShow = {
+            title: `Streak: ${nextStreak} days!`,
+            message:
+              remaining == null
+                ? `You have logged ${nextStreak} days in a row. Keep it going.`
+                : `You have logged ${nextStreak} days in a row. You are getting closer to "${next.name}".`,
+          };
+        }
+
+        const logMilestones = new Set([1, 5, 10, 25, 50, 100, 200]);
+        if (!celebrationToShow && nextCount !== prevCount && logMilestones.has(nextCount)) {
+          celebrationToShow = {
+            title: `${nextCount} logs!`,
+            message: `That is ${nextCount} times you have shown up for "${next.name}".`,
+          };
+        }
+
+        // Comeback: last log was 30+ days ago (only if this isn't their first ever)
+        if (!celebrationToShow && prevCount > 0) {
+          const prevLatest = sortByDateDesc(g.records || [])[0]?.date;
+          if (prevLatest) {
+            const gap = daysBetweenDateOnly(toISODateOnly(prevLatest), draftRecord.dateOnly);
+            if (gap >= 30) {
+              celebrationToShow = {
+                title: "Welcome back",
+                message: `Nice return. One log is all it takes to restart momentum on "${next.name}".`,
+              };
+            }
+          }
+        }
 
         // Celebrate if target reached (unit not required)
         const nextStats = computeProgress(next);
@@ -1373,9 +1445,13 @@ export default function App() {
         }
 
 
+
         return next;
       })
     );
+    if (celebrationToShow) {
+      setCelebration({ open: true, title: celebrationToShow.title, message: celebrationToShow.message });
+    }
 
     setRecordModal({ open: false, goalId: null });
     setDraftRecord({ value: "", note: "", dateOnly: toISODateOnly(isoToday()) });
@@ -2361,7 +2437,45 @@ export default function App() {
           </div>
         }
       >
-        <div className="text-slate-600">You have reached your goal. Would you like to update it to a new goal?</div>
+      {(() => {
+        const g = orderedGoals.find((x) => x.id === congrats.goalId);
+        if (!g) return <div className="text-slate-600">You have reached your goal.</div>;
+
+        const target = g.targetDate ? toISODateOnly(g.targetDate) : null;
+        const reached = g.reachedAt ? toISODateOnly(g.reachedAt) : null;
+
+        let timingLine: string | null = null;
+
+        if (target && reached) {
+          const diff = daysBetweenDateOnly(reached, target); // positive means target is after reached
+          if (diff > 0) timingLine = `You completed this goal ${diff} days before your target date.`;
+          else if (diff < 0) timingLine = `You completed this goal ${Math.abs(diff)} days after your target date.`;
+          else timingLine = "You completed this goal on your target date.";
+        }
+
+        return (
+          <div className="text-slate-600 space-y-2">
+            <div>You have reached your goal.</div>
+            {timingLine ? <div>{timingLine}</div> : null}
+            <div>Would you like to update it to a new goal?</div>
+          </div>
+        );
+      })()}
+      </Modal>
+      <Modal
+        open={celebration.open}
+        title={celebration.title}
+        onClose={() => setCelebration({ open: false, title: "", message: "" })}
+        footer={
+          <button
+            className="w-full h-12 rounded-xl border border-slate-200 bg-white font-semibold"
+            onClick={() => setCelebration({ open: false, title: "", message: "" })}
+          >
+            Nice
+          </button>
+        }
+      >
+        <div className="text-slate-600">{celebration.message}</div>
       </Modal>
       <input
         ref={fileInputRef}
