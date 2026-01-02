@@ -531,6 +531,7 @@ function AppShell({
     </div>
   );
 }
+
 function BottomTabs({
   tab,
   setTab,
@@ -538,50 +539,41 @@ function BottomTabs({
   tab: "goals" | "progress" | "calendar";
   setTab: (t: "goals" | "progress" | "calendar") => void;
 }) {
+  const itemClass = (active: boolean) =>
+    `flex flex-col items-center justify-center text-xs leading-tight ${
+      active ? "text-sky-600" : "text-slate-400"
+    }`;
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30">
       <div
         className="mx-auto max-w-md bg-white border-t border-slate-200"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom)",
+          minHeight: "calc(64px + env(safe-area-inset-bottom))",
+        }}
       >
-        <div className="h-14 flex items-center justify-around pt-1">
-
-          <button
-            className={`flex flex-col items-center text-xs leading-tight ${
-              tab === "calendar" ? "text-sky-600" : "text-slate-400"
-            }`}
-            onClick={() => setTab("calendar")}
-          >
-            <div className="w-9 h-7 rounded-xl flex items-center justify-center -mb-0.5">
+        <div className="h-16 flex items-center justify-around">
+          <button className={itemClass(tab === "calendar")} onClick={() => setTab("calendar")}>
+            <div className="w-9 h-8 rounded-xl flex items-center justify-center -mb-0.5">
               <Calendar className="w-5 h-5" />
             </div>
             <span>Calendar</span>
           </button>
 
-          <button
-            className={`flex flex-col items-center text-xs leading-tight ${
-              tab === "goals" ? "text-sky-600" : "text-slate-400"
-            }`}
-            onClick={() => setTab("goals")}
-          >
-            <div className="w-9 h-7 rounded-xl flex items-center justify-center -mb-0.5">
+          <button className={itemClass(tab === "goals")} onClick={() => setTab("goals")}>
+            <div className="w-9 h-8 rounded-xl flex items-center justify-center -mb-0.5">
               <Target className="w-5 h-5 text-slate-500" />
             </div>
             <span>Goals</span>
           </button>
 
-          <button
-            className={`flex flex-col items-center text-xs leading-tight ${
-              tab === "progress" ? "text-sky-600" : "text-slate-400"
-            }`}
-            onClick={() => setTab("progress")}
-          >
-            <div className="w-9 h-7 rounded-xl flex items-center justify-center -mb-0.5">
+          <button className={itemClass(tab === "progress")} onClick={() => setTab("progress")}>
+            <div className="w-9 h-8 rounded-xl flex items-center justify-center -mb-0.5">
               <TrendingUp className="w-5 h-5" />
             </div>
             <span>Progress</span>
           </button>
-
         </div>
       </div>
     </div>
@@ -3664,14 +3656,6 @@ function CalendarScreen({
             <div className="relative">
               <button
                 type="button"
-                onClick={() => {
-                  // Open the hidden date input
-                  const el = document.getElementById("cal-date-picker") as HTMLInputElement | null;
-                  if (el) {
-                    el.showPicker?.();
-                    el.click();
-                  }
-                }}
                 className="h-10 px-4 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-slate-800"
                 aria-label="Choose date"
               >
@@ -3687,9 +3671,8 @@ function CalendarScreen({
                   if (!v) return;
                   jumpToDate(v);
                 }}
-                className="absolute inset-0 opacity-0 pointer-events-none"
-                tabIndex={-1}
-                aria-hidden="true"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                aria-label="Choose date"
               />
             </div>
 
