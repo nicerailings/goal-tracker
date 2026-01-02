@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-label="Goal Tracker icon">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="80" x2="416" y2="432">
+      <stop offset="0" stop-color="#E6F6FF"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="48" y="48" width="416" height="416" rx="96" fill="url(#bg)"/>
+
+  <circle cx="256" cy="256" r="148" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#38BDF8" stroke-width="26"/>
+  <circle cx="256" cy="256" r="84"  fill="none" stroke="#7DD3FC" stroke-width="26"/>
+  <circle cx="256" cy="256" r="48"  fill="none" stroke="#38BDF8" stroke-width="26"/>
+  <circle cx="256" cy="256" r="16"  fill="#0B74C5"/>
+
+  <path d="M148 364 L256 256" stroke="#0B74C5" stroke-width="16" stroke-linecap="round"/>
+  <path d="M148 364 L256 256" stroke="#7DD3FC" stroke-width="8" stroke-linecap="round"/>
+</svg>
