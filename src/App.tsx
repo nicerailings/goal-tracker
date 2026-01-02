@@ -810,6 +810,7 @@ function ColourPickerRow({ value, onChange }) {
 // -------------------------
 
 type Route = { name: "home" } | { name: "tracking"; goalId: string };
+type Location = { tab: "goals" | "progress" | "calendar"; route: Route };
 
 export default function App() {
   const [tab, setTab] = useState<"goals" | "progress" | "calendar">("goals");
@@ -825,6 +826,8 @@ export default function App() {
   const [hideCompletedGoals, setHideCompletedGoals] = useState(false);
   const editFromCalendarRef = React.useRef(false);
   const editFromTrackingRef = React.useRef<string | null>(null);
+  const navStackRef = React.useRef<Location[]>([]);
+  const editReturnRef = React.useRef<Location | null>(null);
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   useEffect(() => {
     try {
@@ -1020,6 +1023,23 @@ export default function App() {
     setTab("goals");
   }
 
+  function pushNav() {
+    navStackRef.current = [...navStackRef.current, { tab, route }];
+  }
+
+  function popNav() {
+    const stack = navStackRef.current;
+    const prev = stack[stack.length - 1] || null;
+    navStackRef.current = stack.slice(0, -1);
+
+    if (prev) {
+      setTab(prev.tab);
+      setRoute(prev.route);
+      return;
+    }
+
+    setRoute({ name: "home" });
+  }
 
   function emptyGoalDraft() {
     const nextYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
@@ -1086,6 +1106,9 @@ export default function App() {
   function openEditGoal(goal) {
     setMoreOptionsOpen(false);
 
+    // remember where we came from (Goals, Progress, Calendar, or Tracking)
+    editReturnRef.current = { tab, route };
+
     setDraftGoal({
       iconKey: goal.iconKey || "Target",
       name: goal.name || "",
@@ -1145,7 +1168,7 @@ export default function App() {
 
     // If target is set, starting number must be set
     if (finalTargetNumber != null && finalStarting == null) {
-      setGoalFormError("Please set a starting number if you set a target number.");
+      setGoalFormError("A starting number is required when a target number is set.");
       return;
     }
 
@@ -1284,6 +1307,7 @@ export default function App() {
   }
 
   function openTracking(goalId: string) {
+    pushNav();
     setRoute({ name: "tracking", goalId });
   }
 
@@ -1434,7 +1458,7 @@ export default function App() {
       ) : (
         <TrackingScreen
           goal={activeGoal}
-          onBack={() => setRoute({ name: "home" })}
+          onBack={popNav}
           onAddRecord={() => activeGoal && openAddRecord(activeGoal.id)}
           onDeleteRecord={(recordId) => activeGoal && deleteRecord(activeGoal.id, recordId)}
           onSetChartMode={(mode) => activeGoal && setGoalChartMode(activeGoal.id, mode)}
@@ -1444,22 +1468,18 @@ export default function App() {
             openEditGoal(activeGoal);
           }}
           right={
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <button
                 className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center"
-                onClick={() => setSettingsModal(true)}
-              >
-                <Settings className="w-5 h-5 text-slate-600" />
-              </button>
-              <button
-                className="h-10 px-3 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-slate-800"
                 onClick={() => {
                   if (!activeGoal) return;
                   editFromCalendarRef.current = false;
                   openEditGoal(activeGoal);
                 }}
+                aria-label="Edit goal"
+                title="Edit"
               >
-                Edit
+                <Pencil className="w-5 h-5 text-slate-600" />
               </button>
             </div>
           }
@@ -1538,16 +1558,12 @@ export default function App() {
           setGoalModal({ open: false, mode: "create", goalId: null });
           setGoalFormError("");
 
-          if (editFromCalendarRef.current) {
-            setTab("calendar");
-            editFromCalendarRef.current = false;
-            return;
-          }
+          const back = editReturnRef.current;
+          editReturnRef.current = null;
 
-          if (editFromTrackingRef.current) {
-            const id = editFromTrackingRef.current;
-            editFromTrackingRef.current = null;
-            setRoute({ name: "tracking", goalId: id });
+          if (back) {
+            setTab(back.tab);
+            setRoute(back.route);
             return;
           }
 
@@ -1568,29 +1584,29 @@ export default function App() {
                 return;
               }
 
+              const targetNum = String(draftGoal.targetNumber || "").trim();
+              const startNum = String(draftGoal.startingNumber || "").trim();
 
-              saveGoalFromDraft();
-
-              if (editFromTrackingRef.current) {
-                const id = editFromTrackingRef.current;
-                editFromTrackingRef.current = null;
-                setRoute({ name: "tracking", goalId: id });
+              if (targetNum !== "" && startNum === "") {
+                setGoalFormError("Please set a starting number if you set a target number.");
                 return;
               }
 
-              if (editFromCalendarRef.current) {
-                setTab("calendar");
-                editFromCalendarRef.current = false;
+              saveGoalFromDraft();
+
+              const back = editReturnRef.current;
+              editReturnRef.current = null;
+
+              if (back) {
+                setTab(back.tab);
+                setRoute(back.route);
                 return;
               }
 
               goHomeGoals();
 
             }}
-            disabled={
-              !String(draftGoal.name || "").trim() ||
-              (String(draftGoal.targetNumber || "").trim() !== "" && String(draftGoal.startingNumber || "").trim() === "")
-            }
+            disabled={!String(draftGoal.name || "").trim()}
 
           >
             Complete
